@@ -1,4 +1,4 @@
-import sys
+import argparse
 
 class Node():
     def __init__(self, state, parent, action):
@@ -30,7 +30,6 @@ class StackFrontier():
 
 
 class QueueFrontier(StackFrontier):
-
     def remove(self):
         if self.empty():
             raise Exception("empty frontier")
@@ -40,9 +39,8 @@ class QueueFrontier(StackFrontier):
             return node
 
 class Maze():
-
-    def __init__(self, filename):
-
+    def __init__(self, filename, strategy):
+        self.strategy = strategy
         # Read file and set height and width of maze
         with open(filename) as f:
             contents = f.read()
@@ -124,7 +122,11 @@ class Maze():
 
         # Initialize frontier to just the starting position
         start = Node(state=self.start, parent=None, action=None)
-        frontier = StackFrontier()
+        match self.strategy:
+            case 'dfs':
+                frontier = StackFrontier()
+            case 'bfs':
+                frontier = QueueFrontier()
         frontier.add(start)
 
         # Initialize an empty explored set
@@ -215,10 +217,24 @@ class Maze():
         img.save(filename)
 
 
-#if len(sys.argv) != 2:
-#    sys.exit("Usage: python maze.py maze.txt")
 
-m = Maze("./maze1.txt")#sys.argv[1])
+def init_argparse() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [MAZE_FILE] [STRATEGY]...",
+        description=" Harvard CS50 introductrion to AI with python - search."
+    )
+    parser.add_argument("-m","--maze_file", type=str, required=True)
+    parser.add_argument("-s", "--strategy", type=str, default="dfs")
+    parser.add_argument("-e", "--show_explored", type=bool, default=False)
+    return parser
+
+parser = init_argparse()
+args = parser.parse_args()
+maze_file = args.maze_file
+strategy = args.strategy
+show_explored = args.show_explored
+
+m = Maze(maze_file, strategy)
 print("Maze:")
 m.print()
 print("Solving...")
@@ -226,4 +242,4 @@ m.solve()
 print("States Explored:", m.num_explored)
 print("Solution:")
 m.print()
-m.output_image("maze.png", show_explored=True)
+m.output_image("maze.png", show_explored=show_explored)
