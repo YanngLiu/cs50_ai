@@ -85,7 +85,7 @@ class Maze():
         for i, row in enumerate(self.walls):
             for j, col in enumerate(row):
                 if col:
-                    print("â–ˆ", end="")
+                    print(b'\xe2\x96\x88'.decode('utf8'), end="")
                 elif (i, j) == self.start:
                     print("A", end="")
                 elif (i, j) == self.goal:
