@@ -20,6 +20,7 @@ class StackFrontier():
     def __init__(self):
         self.frontier = []
 
+
     def add(self, node):
         self.frontier.append(node)
 
@@ -53,7 +54,7 @@ class GreedyBestFirstFrontier(StackFrontier):
         super(GreedyBestFirstFrontier, self).__init__()
         self.heuristicMap = {}
     
-    def heuristic(self, state, goal):
+    def heuristic(self, state, goal) -> int:
         # use manhattan distance from state to goal
         if state not in self.heuristicMap:
             res = abs(state[0] - goal[0]) + abs(state[1] - goal[1])
@@ -69,6 +70,11 @@ class GreedyBestFirstFrontier(StackFrontier):
         else:
             node = heapq.heappop(self.frontier)
             return node
+
+
+class AAsteriskFrontier(GreedyBestFirstFrontier):
+    def dummy(self):
+        pass
 
 
 class Maze():
@@ -112,13 +118,13 @@ class Maze():
         self.solution = None
 
 
-    def simple(self):
+    def is_simple(self):
         return self.strategy in {'bfs', 'dfs'}
 
 
     def print(self):
         cells = self.solution[1] if self.solution is not None else None
-        if self.simple():
+        if self.is_simple():
             solution = cells
         else:
             solution = None if cells is None else {state for _, state in cells}
@@ -172,6 +178,9 @@ class Maze():
             case 'gbfs':
                 start = WeightedNode(weight=0, state=self.start, parent=None, action=None)
                 frontier = GreedyBestFirstFrontier()
+            case 'aas':
+                start = WeightedNode(weight=0, state=self.start, parent=None, action=None)
+                frontier = AAsteriskFrontier()
         frontier.add(start)
 
         # Initialize an empty explored set
@@ -194,7 +203,7 @@ class Maze():
                 cells = []
                 while node.parent is not None:
                     actions.append(node.action)
-                    if self.simple():
+                    if self.is_simple():
                         cells.append(node.state)
                     else:
                         cells.append((node.weight, node.state,))
@@ -205,16 +214,27 @@ class Maze():
                 return
 
             # Mark node as explored
-            self.explored[node.state] = -1 if self.simple() else node.weight
+            self.explored[node.state] = -1 if self.is_simple() else node.weight
 
             # Add neighbors to frontier
             for action, state in self.neighbors(node.state):
                 if not frontier.contains_state(state) and state not in self.explored:
-                    if self.simple():
+                    if self.is_simple():
                         child = Node(state=state, parent=node, action=action)
                     else:
-                        child = WeightedNode(weight=frontier.heuristic(state, self.goal), state=state, parent=node, action=action)
+                        weight = frontier.heuristic(state, self.goal)
+                        if self.strategy == 'aas':
+                            weight += self.cost(node)
+                        child = WeightedNode(weight=weight, state=state, parent=node, action=action)
                     frontier.add(child)
+
+
+    def cost(self, state:Node) -> int:
+        res = 0
+        while state and state != self.start:
+            res += 1
+            state = state.parent
+        return res
 
 
     def output_image(self, filename, show_solution=True, show_explored=False):
@@ -232,7 +252,7 @@ class Maze():
         draw = ImageDraw.Draw(img)
 
         cells = self.solution[1] if self.solution is not None else None
-        if self.simple():
+        if self.is_simple():
             solution = cells
         else:
             solution = {state for _, state in cells}
@@ -255,12 +275,12 @@ class Maze():
                 # Solution
                 elif solution is not None and show_solution and (i, j) in solution:
                     fill = (220, 235, 113)
-                    if not self.simple():
+                    if not self.is_simple():
                         weight = weights[(i, j,)]
                 # Explored
                 elif solution is not None and show_explored and (i, j) in self.explored:
                     fill = (212, 97, 85)
-                    if not self.simple():
+                    if not self.is_simple():
                         weight = weights[(i, j,)]
                 # Empty cell
                 else:
@@ -272,7 +292,7 @@ class Maze():
                       ((j + 1) * cell_size - cell_border, (i + 1) * cell_size - cell_border)]),
                     fill=fill
                 )
-                if not self.simple() and weight > 0:
+                if not self.is_simple() and weight > 0:
                     draw.text((j * cell_size + cell_border + weight_border, i * cell_size + cell_border + weight_border),str(weight),(0,0,128),font=font)
 
         img.save(filename)
